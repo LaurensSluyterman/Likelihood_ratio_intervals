@@ -2,6 +2,8 @@ from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras import Model
 from keras.layers import Input, Dense
 from keras.models import Model
+from intervals import CI_intervals
+from utils import normalize, reverse_normalized, get_second_derivative_constant
 import keras.models
 import numpy as np
 import tensorflow.keras.backend as K
@@ -24,7 +26,8 @@ class LikelihoodNetwork:
     """
 
     def __init__(self, X, Y, n_hidden, n_epochs, save_epoch=0,
-                 reg=True, batch_size=None, verbose=False, normalization=True):
+                 reg=True, batch_size=None, verbose=False, normalization=True,
+                 get_second_derivative=True):
         """
         Arguments:
             X: The unnormalized training covariates.
@@ -55,6 +58,9 @@ class LikelihoodNetwork:
                               reg=reg, batch_size=batch_size,
                               verbose=verbose)
         self.model = model
+        if get_second_derivative:
+            D = get_second_derivative_constant(X, self.model)
+            self.D = D
 
     def f(self, X_test):
         """Return the mean prediction without any regularisation"""
@@ -74,18 +80,18 @@ class LikelihoodNetwork:
         else:
             return K.exp(self.model.predict(X_test)[:, 1]) + 1e-3
 
-def normalize(x, mean=None, std=None):
-    """This function normalizes x using a given mean and standard deviation"""
-    if mean is None:
-        mean = np.mean(x, axis=0)
-    if std is None:
-        std = np.std(x, axis=0)
-    return (x - mean) / std
-
-
-def reverse_normalized(x_normalized, mean, std):
-    """This function reverses the normalization done by the function 'normalize' """
-    return x_normalized * std + mean
+    def CI(self, X_test, X_train, Y_train, alpha, D=None):
+        if D is None:
+            D = self.D
+        if self._normalization:
+            X_test = normalize(X_test, self._X_mean, self._X_std)
+            X_train = normalize(X_train, self._X_mean, self._X_std)
+            Y_train = normalize(Y_train, self._Y_mean, self._Y_std)
+        CI = CI_intervals(self.model, X_test, X_train, Y_train, alpha, D)
+        if self._normalization:
+            CI[:, 0] = reverse_normalized(CI[:, 0], self._Y_mean, self._Y_std)
+            CI[:, 1] = reverse_normalized(CI[:, 1], self._Y_mean, self._Y_std)
+        return CI
 
 
 def train_network(X_train, Y_train, n_hidden, n_epochs, loss, reg=True,

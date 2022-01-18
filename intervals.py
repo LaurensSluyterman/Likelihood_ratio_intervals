@@ -1,19 +1,20 @@
 import numpy as np
 from scipy import stats
+from utils import normalize
 import scipy
 
 
-def CI_intervals(network, X, X_train, Y_train, alpha, D):
+def CI_intervals(model, X, X_train, Y_train, alpha, D):
     CI = np.zeros((len(X), 2))
     for j, x in enumerate(X):
-        l, u = CI_x(x, network, X_train, Y_train, alpha, D)
+        l, u = CI_x(x, model, X_train, Y_train, alpha, D)
         CI[j, 0] = l
         CI[j, 1] = u
     return CI
 
 
 def CI_x(x_0, model, X_train, Y_train, alpha, D, stepsize=0.005):
-    upperbound = model.f([x_0])
+    upperbound = model.predict([x_0])[:, 0]
     accepting = True
     n = 1
     while accepting:
@@ -23,7 +24,7 @@ def CI_x(x_0, model, X_train, Y_train, alpha, D, stepsize=0.005):
             upperbound = y
             n += 1
     accepting = True
-    lowerbound = model.f([x_0])
+    lowerbound = model.predict([x_0])[:, 0]
     n = 1
     while accepting:
         y = lowerbound - stepsize
@@ -36,8 +37,8 @@ def CI_x(x_0, model, X_train, Y_train, alpha, D, stepsize=0.005):
 
 def accept(model, X, Y, x_0, y_0, D, alpha, positive=True):
     g = get_perturbation(x_0, y_0, D)
-    mu_hat = model.f(X)
-    sigma = model.sigma(X)
+    mu_hat = model.predict(X)[:, 0]
+    sigma = np.exp(model.predict(X))[:, 1]
     if positive:
         mu_0 = mu_hat + np.array(list(map(g, X)))
     if not positive:
@@ -77,7 +78,7 @@ def get_perturbation(x_0, y_0, D):
 
 
 def get_C(model, g, X):
-    sigma = model.sigma(X)
+    sigma = np.exp(model.predict(X)[:, 1])
     C = np.sum(np.array(list(map(g, X)))**2 / sigma**2) + 1e-3
     return C
 
@@ -85,13 +86,13 @@ def get_C(model, g, X):
 def LR(y, mu_0, mu_hat, sigma):
     return 2 * (- 0.5 * np.sum(((y - mu_hat) / sigma)**2) + 0.5 * np.sum(((y - mu_0) / sigma)**2))
 
-
-y = list(map(a, x))
-b = get_perturbation(np.array([0.1, 2]), 0.1, 10)
-y_2 = list(map(b, x))
-x = np.linspace(1.5, 2.5, 100)
-
-b([0.1, 20])
-plt.plot(x, y)
-plt.plot(x, y_2)
-plt.show()
+#
+# y = list(map(a, x))
+# b = get_perturbation(np.array([0.1, 2]), 0.1, 10)
+# y_2 = list(map(b, x))
+# x = np.linspace(1.5, 2.5, 100)
+#
+# b([0.1, 20])
+# plt.plot(x, y)
+# plt.plot(x, y_2)
+# plt.show()
