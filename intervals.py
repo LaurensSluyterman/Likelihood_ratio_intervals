@@ -6,47 +6,51 @@ import scipy
 
 def CI_intervals(model, X, X_train, Y_train, alpha, D):
     CI = np.zeros((len(X), 2))
+    predictions = model.predict(X_train)
+    mu_hats = model.predict(X_train)[:, 0]
+    start_values = model.predict(X)[:, 0]
+    sigma_hats = np.exp(predictions[:, 1]) +1e-3
     for j, x in enumerate(X):
-        l, u = CI_x(x, model, X_train, Y_train, alpha, D)
+        l, u = CI_x(x, X_train, Y_train, mu_hats, sigma_hats, start_values[j], alpha, D)
         CI[j, 0] = l
         CI[j, 1] = u
     return CI
 
 
-def CI_x(x_0, model, X_train, Y_train, alpha, D, stepsize=0.005):
-    upperbound = model.predict([x_0])[:, 0]
+def CI_x(x_0, X_train, Y_train, mu_hats, sigma_hats, start_value, alpha, D, stepsize=0.01):
+    upperbound = start_value
     accepting = True
     n = 1
     while accepting:
-        y = upperbound + stepsize
-        accepting = accept(model, X_train, Y_train, x_0, stepsize * n, D, alpha, positive=1)
+        print(upperbound)
+        accepting = accept(X_train, Y_train, mu_hats, sigma_hats, x_0, stepsize * n, D, alpha, positive=1)
         if accepting:
-            upperbound = y
+            upperbound += stepsize
             n += 1
     accepting = True
-    lowerbound = model.predict([x_0])[:, 0]
+    lowerbound = start_value
     n = 1
     while accepting:
-        y = lowerbound - stepsize
-        accepting = accept(model, X_train, Y_train, x_0, stepsize * n, D, alpha, positive=0)
+        print(lowerbound)
+        accepting = accept(X_train, Y_train, mu_hats, sigma_hats, x_0, stepsize * n, D, alpha, positive=0)
         if accepting:
-            lowerbound = y
+            lowerbound -= stepsize
             n += 1
-    return lowerbound[0], upperbound[0]
+    print('--')
+    return lowerbound, upperbound
 
 
-def accept(model, X, Y, x_0, y_0, D, alpha, positive=True):
+def accept(X, Y, mu_hats, sigma_hats, x_0, y_0, D, alpha, positive=True):
     g = get_perturbation(x_0, y_0, D)
-    mu_hat = model.predict(X)[:, 0]
-    sigma = np.exp(model.predict(X))[:, 1]
     if positive:
-        mu_0 = mu_hat + np.array(list(map(g, X)))
+        mu_0 = mu_hats + np.array(list(map(g, X)))
     if not positive:
-        mu_0 = mu_hat - np.array(list(map(g, X)))
-    ratio = LR(Y, mu_0, mu_hat, sigma)
- #   q = scipy.stats.chi2(1).ppf(1 - alpha / 2)
-    C = get_C(model, g, X)
-    q = scipy.stats.norm(loc=-C, scale=2*np.sqrt(C)).ppf(1 - alpha / 2)
+        mu_0 = mu_hats - np.array(list(map(g, X)))
+    ratio = LR(Y, mu_0, mu_hats, sigma_hats)
+    q = scipy.stats.chi2(1).ppf(1 - alpha / 2)
+    C = get_C(sigma_hats, g, X)
+ #   q = scipy.stats.norm(loc=-C, scale=2*np.sqrt(C)).ppf(1 - alpha / 2)
+    print(f'q={q}')
     if ratio > q:
         return 0
     else:
@@ -77,8 +81,7 @@ def get_perturbation(x_0, y_0, D):
     return g
 
 
-def get_C(model, g, X):
-    sigma = np.exp(model.predict(X)[:, 1])
+def get_C(sigma, g, X):
     C = np.sum(np.array(list(map(g, X)))**2 / sigma**2) + 1e-3
     return C
 

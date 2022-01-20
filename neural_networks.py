@@ -1,13 +1,20 @@
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras import Model
-from keras.layers import Input, Dense
-from keras.models import Model
-from intervals import CI_intervals
-from utils import normalize, reverse_normalized, get_second_derivative_constant
 import keras.models
 import numpy as np
 import tensorflow.keras.backend as K
+import tensorflow as tf
+import tensorflow_probability as tfp
+from tensorflow import keras
+from sklearn.utils import resample
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras import Model
+from utils import normalize, reverse_normalized
+from keras import initializers
+from tensorflow.keras.layers import InputSpec
+from keras.layers import Input, Dense, merge
+from keras.models import Model
 
+from intervals import CI_intervals
+from utils import normalize, reverse_normalized, get_second_derivative_constant
 l2 = keras.regularizers.l2
 
 class LikelihoodNetwork:
@@ -122,7 +129,7 @@ def train_network(X_train, Y_train, n_hidden, n_epochs, loss, reg=True,
             deviation.
     """
     try:
-        input_shape = np.shape(X_train)[1]
+        input_shape = (np.shape(X_train)[1],)
     except IndexError:
         input_shape = (1,)
     if reg is True:
@@ -130,11 +137,11 @@ def train_network(X_train, Y_train, n_hidden, n_epochs, loss, reg=True,
     else:
         c = reg
     inputs = Input(shape=input_shape)
-    inter = Dense(n_hidden[0], activation='elu',
+    inter = Dense(n_hidden[0], activation='relu',
                   kernel_regularizer=l2(c),
                   bias_regularizer=l2(0))(inputs)
     for i in range(len(n_hidden) - 1):
-        inter = Dense(n_hidden[i + 1], activation='elu',
+        inter = Dense(n_hidden[i + 1], activation='relu',
                       kernel_regularizer=keras.regularizers.l2(c))(inter)
     outputs = Dense(2, activation='linear')(inter)
     model = Model(inputs, outputs)
