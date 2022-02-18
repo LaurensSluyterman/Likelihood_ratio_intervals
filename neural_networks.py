@@ -13,8 +13,8 @@ from tensorflow.keras.layers import InputSpec
 from keras.layers import Input, Dense, merge
 from keras.models import Model
 
-from intervals import CI_intervals
-from utils import normalize, reverse_normalized, get_second_derivative_constant
+from intervals import CI_intervals, CI_intervals_2
+from utils import normalize, reverse_normalized, get_second_derivative_constant, get_rho
 l2 = keras.regularizers.l2
 
 class LikelihoodNetwork:
@@ -64,10 +64,16 @@ class LikelihoodNetwork:
         model = train_network(X, Y, n_hidden, loss=negative_log_likelihood, n_epochs=n_epochs,
                               reg=reg, batch_size=batch_size,
                               verbose=verbose)
+        try:
+            self.covariance_matrix_inv = np.linalg.inv(np.cov(X, rowvar=False))
+        except:
+            self.covariance_matrix_inv = [1 / np.var(X)]
         self.model = model
         if get_second_derivative:
-            D = get_second_derivative_constant(X, self.model)
-            self.D = D
+          #  D = get_second_derivative_constant(X, self.model)
+            rho = get_rho(X, self.model)
+        #    self.D = D
+            self.rho = rho
 
     def f(self, X_test):
         """Return the mean prediction without any regularisation"""
@@ -87,14 +93,15 @@ class LikelihoodNetwork:
         else:
             return K.exp(self.model.predict(X_test)[:, 1]) + 1e-3
 
-    def CI(self, X_test, X_train, Y_train, alpha, D=None):
-        if D is None:
-            D = self.D
+    def CI(self, X_test, X_train, Y_train, alpha, rho=None):
+        if rho is None:
+            rho = self.rho
         if self._normalization:
             X_test = normalize(X_test, self._X_mean, self._X_std)
             X_train = normalize(X_train, self._X_mean, self._X_std)
             Y_train = normalize(Y_train, self._Y_mean, self._Y_std)
-        CI = CI_intervals(self.model, X_test, X_train, Y_train, alpha, D)
+      #  CI = CI_intervals(self.model, X_test, X_train, Y_train, alpha, D, covariance_inv)
+        CI = CI_intervals_2(self.model, X_test, X_train, Y_train, alpha, rho)
         if self._normalization:
             CI[:, 0] = reverse_normalized(CI[:, 0], self._Y_mean, self._Y_std)
             CI[:, 1] = reverse_normalized(CI[:, 1], self._Y_mean, self._Y_std)

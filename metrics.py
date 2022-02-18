@@ -1,4 +1,7 @@
-class Interval_metrics():
+import numpy as np
+from utils import CI_coverage_probability
+
+class IntervalMetrics():
     def __init__(self, N_simulations, alphas, N_test):
         self.alphas = alphas
         self.CI_correct = np.zeros((N_simulations, len(alphas), N_test))
