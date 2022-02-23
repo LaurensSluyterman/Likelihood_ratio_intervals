@@ -5,19 +5,17 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from intervals import CI_intervals, CI_x
 from neural_networks import LikelihoodNetwork
-from metrics import Interval_metrics
+
 
 
 X = np.hstack((np.random.uniform(-1, -0.2, size=40), np.random.uniform(0.2, 1, size=40)))
 Y = np.random.normal(loc=2*X**2, scale=0.1)
 
 a = LikelihoodNetwork(X, Y, np.array([30, 20, 10]), n_epochs=100, verbose=1, normalization=True,
-                      get_second_derivative=True)
-model = a.model
-X_n_2 = (X - np.mean(X)) / np.std(X)
-a.D
+                      get_second_derivative=False)
+
 x_test = np.linspace(-1.5,1.5,100)
-CI_3 = a.CI(x_test, X, Y, 0.1, D=a.D)
+CI_3 = a.CI(x_test, X, Y, 0.1, rho=14)
 
 D = get_second_derivative_constant(X, model)
 

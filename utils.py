@@ -62,15 +62,6 @@ def get_second_derivative_constant(X, model):
     return np.mean(Ds)
 
 def get_rho(X, model):
-    gradients = []
-    for x in X:
-        try:
-            n_dim = np.shape(x)[0]
-            x_tensor = tf.constant(x, shape=(1, n_dim), dtype=tf.float32)
-        except IndexError:
-            x_tensor = tf.constant(x, shape=(1, 1), dtype=tf.float32)
-        gradient = get_gradient(x_tensor, model)
-        gradients.append(gradient[0][0].numpy())
     vars = [get_var(x, model, std=0.1) for x in X]
     return 2 * np.mean(vars)
 
@@ -129,6 +120,7 @@ def get_second_derivative_matrix(model, x, B=50):
         d = np.shape(x)[0]
     except IndexError:
         x_tensor = tf.constant(x, shape=(1, 1), dtype=tf.float32)
+        d = 1
     gradient = get_gradient(x_tensor, model)[0][0].numpy()
     n_d = np.int(d * (d + 1) / 2)
     B = np.int(B * d)

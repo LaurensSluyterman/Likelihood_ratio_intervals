@@ -1,6 +1,6 @@
 .DS_Store
 .idea/
-__pychache__/
+__pycache__/
 _SHELVE_LOCATION
 savedneetworks/
 Distribution check.py

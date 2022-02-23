@@ -94,7 +94,7 @@ def accept_2(X, Y, mu_hats, sigma_hats, x_0, y_0, alpha, E, positive=True):
         mu_0 = mu_hats - np.array(list(map(g, X)))
     ratio = LR(Y, mu_0, mu_hats, sigma_hats)
     C = get_C(sigma_hats, g, X)
-    critical_value = scipy.stats.norm(loc=-C, scale=2*np.sqrt(C)).ppf(1 - alpha) # todo: Think about alpha or alpha/2
+    critical_value = scipy.stats.norm(loc=-C, scale=2*np.sqrt(C)).ppf(1 - alpha) 
     if ratio > critical_value:
         return 0
     else:
@@ -120,8 +120,12 @@ def get_perturbation(x_0, y_0, D, convinv=None):
 
 def get_perturbation_2(x_0, y_0, E):
     shape_x_0 = np.shape(x_0)
+    if shape_x_0 is ():
+        x_0 = np.array([x_0])
     def g(x):
         assert np.shape(x) == shape_x_0
+        if np.shape(x) is ():
+            x = np.array([x])
         ksi = np.sqrt(np.abs(y_0))
         z = np.sqrt(np.transpose(x - x_0) @ E @ (x-x_0))
         if z < ksi:
