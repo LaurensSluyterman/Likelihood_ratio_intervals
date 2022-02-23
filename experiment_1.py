@@ -3,14 +3,12 @@ from utils import load_data
 from neural_networks import LikelihoodNetwork
 from sklearn.model_selection import train_test_split
 from target_simulation import create_true_function_and_variance, gen_new_targets
-from utils import get_second_derivative_constant
 from metrics import IntervalMetrics
-import klepto
 import matplotlib.pyplot as plt
 from klepto.archives import dir_archive
 
 #importlib.reload(packagename)
-data_directory = 'kin8nm'
+data_directory = 'bostonHousing'
 X, Y = load_data(data_directory)
 distribution = 'Gaussian'
 f, var_true = create_true_function_and_variance(X, Y)
@@ -18,12 +16,12 @@ f, var_true = create_true_function_and_variance(X, Y)
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=1)
 N_test = len(X_test)
 
-# Y_train_new = gen_new_targets(X_train, f, var_true, dist=distribution)
-# network = LikelihoodNetwork(X_train, Y_train_new, np.array([40, 30, 20]), n_epochs=120, verbose=1, normalization=True,
-#                             get_second_derivative=True)
+Y_train_new = gen_new_targets(X_train, f, var_true, dist=distribution)
+network = LikelihoodNetwork(X_train, Y_train_new, np.array([40, 30, 20]), n_epochs=120, verbose=1, normalization=True,
+                            get_second_derivative=False)
 # model = network.model
 # X_ood = np.random.normal(loc=np.mean(X_train, axis=0), scale=np.std(X_train, axis=0), size=(100,8))
-# CI_normal = network.CI(X_test[0:10], X_train, Y_train_new, alpha=0.2, rho=network.rho)
+CI_normal = network.CI(X_test[0:10], X_train, Y_train_new, alpha=0.2, rho=25)
 # CI_ood = network.CI(X_ood, X_train, Y_train_new, alpha=0.2, D=network.D)
 # CI_normal
 # np.mean(CI_normal[:, 1] - CI_normal[:,0])
