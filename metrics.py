@@ -1,5 +1,5 @@
 import numpy as np
-from utils import CI_coverage_probability
+from second_derivative_utils import CI_coverage_probability
 
 class IntervalMetrics():
     def __init__(self, N_simulations, alphas, N_test):

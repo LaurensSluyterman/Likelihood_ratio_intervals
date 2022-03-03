@@ -1,5 +1,5 @@
 import numpy as np
-from utils import load_data
+from second_derivative_utils import load_data
 from neural_networks import LikelihoodNetwork
 from sklearn.model_selection import train_test_split
 from target_simulation import create_true_function_and_variance, gen_new_targets
@@ -18,7 +18,7 @@ N_test = len(X_test)
 
 Y_train_new = gen_new_targets(X_train, f, var_true, dist=distribution)
 network = LikelihoodNetwork(X_train, Y_train_new, np.array([40, 30, 20]), n_epochs=120, verbose=1, normalization=True,
-                            get_second_derivative=False)
+                            get_rho_constant=False)
 # model = network.model
 # X_ood = np.random.normal(loc=np.mean(X_train, axis=0), scale=np.std(X_train, axis=0), size=(100,8))
 CI_normal = network.CI(X_test[0:10], X_train, Y_train_new, alpha=0.2, rho=25)
@@ -39,7 +39,7 @@ for i in range(0, N_simulations):
     f_test = f(X_test)
     network = LikelihoodNetwork(X_train, Y_train_new, np.array([40, 30, 20]), n_epochs=80, verbose=0,
                                 normalization=True,
-                                get_second_derivative=True)
+                                get_rho_constant=True)
     CI = network.CI(X_test, X_train, Y_train_new, alpha=0.2, rho=network.rho)
     metrics.update_bias(network.f(X_test), f_test, i)
     metrics.update_CI(CI, f_test, i, 0)

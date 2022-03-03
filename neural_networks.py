@@ -1,20 +1,15 @@
 import keras.models
 import numpy as np
 import tensorflow.keras.backend as K
-import tensorflow as tf
-import tensorflow_probability as tfp
 from tensorflow import keras
-from sklearn.utils import resample
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras import Model
 from utils import normalize, reverse_normalized
-from keras import initializers
-from tensorflow.keras.layers import InputSpec
-from keras.layers import Input, Dense, merge
+from keras.layers import Input, Dense
 from keras.models import Model
 
-from intervals import CI_intervals, CI_intervals_2
-from utils import normalize, reverse_normalized, get_second_derivative_constant, get_rho
+from intervals import CI_intervals
+from second_derivative_utils import get_rho
 l2 = keras.regularizers.l2
 
 class LikelihoodNetwork:
@@ -34,7 +29,7 @@ class LikelihoodNetwork:
 
     def __init__(self, X, Y, n_hidden, n_epochs, save_epoch=0,
                  reg=True, batch_size=None, verbose=False, normalization=True,
-                 get_second_derivative=True):
+                 get_rho_constant=True):
         """
         Arguments:
             X: The unnormalized training covariates.
@@ -69,11 +64,10 @@ class LikelihoodNetwork:
         except:
             self.covariance_matrix_inv = [1 / np.var(X)]
         self.model = model
-        if get_second_derivative:
-          #  D = get_second_derivative_constant(X, self.model)
+        if get_rho_constant:
             rho = get_rho(X, self.model)
-        #    self.D = D
             self.rho = rho
+
 
     def f(self, X_test):
         """Return the mean prediction without any regularisation"""
@@ -84,6 +78,7 @@ class LikelihoodNetwork:
         else:
             return self.model.predict(X_test)[:, 0]
 
+
     def sigma(self, X_test):
         """Return the standard deviation prediction without any regularisation."""
         if self._normalization is True:
@@ -93,6 +88,7 @@ class LikelihoodNetwork:
         else:
             return K.exp(self.model.predict(X_test)[:, 1]) + 1e-3
 
+
     def CI(self, X_test, X_train, Y_train, alpha, rho=None):
         if rho is None:
             rho = self.rho
@@ -100,8 +96,7 @@ class LikelihoodNetwork:
             X_test = normalize(X_test, self._X_mean, self._X_std)
             X_train = normalize(X_train, self._X_mean, self._X_std)
             Y_train = normalize(Y_train, self._Y_mean, self._Y_std)
-      #  CI = CI_intervals(self.model, X_test, X_train, Y_train, alpha, D, covariance_inv)
-        CI = CI_intervals_2(self.model, X_test, X_train, Y_train, alpha, rho)
+        CI = CI_intervals(self.model, X_test, X_train, Y_train, alpha, rho)
         if self._normalization:
             CI[:, 0] = reverse_normalized(CI[:, 0], self._Y_mean, self._Y_std)
             CI[:, 1] = reverse_normalized(CI[:, 1], self._Y_mean, self._Y_std)
@@ -145,8 +140,7 @@ def train_network(X_train, Y_train, n_hidden, n_epochs, loss, reg=True,
         c = reg
     inputs = Input(shape=input_shape)
     inter = Dense(n_hidden[0], activation='relu',
-                  kernel_regularizer=l2(c),
-                  bias_regularizer=l2(0))(inputs)
+                  kernel_regularizer=l2(c))(inputs)
     for i in range(len(n_hidden) - 1):
         inter = Dense(n_hidden[i + 1], activation='relu',
                       kernel_regularizer=keras.regularizers.l2(c))(inter)
