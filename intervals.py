@@ -19,20 +19,63 @@ def timer(func):
 
 
 
-def CI_intervals(model, X, X_train, Y_train, alpha, rho):
+def CI_intervals(model, X, X_train, Y_train, alpha, rho, give_E_matrices=False):
     CI = np.zeros((len(X), 2))
     predictions = model.predict(X_train)
     mu_hats = predictions[:, 0]
     start_values = model.predict(X)[:, 0]
     sigma_hats = np.exp(predictions[:, 1]) + 1e-3
     Z_values = (mu_hats - Y_train) / sigma_hats
+    E_matrices = []
     for j, x in enumerate(X):
         A = get_second_derivative_matrix(model, x)
         E = get_E(A, rho)
-        l, u = CI_x(x, X_train, Z_values, sigma_hats, start_values[j], alpha, E)
-        CI[j, 0] = l
-        CI[j, 1] = u
-    return CI
+        E_matrices.append(E)
+        lowerbound, upperbound = CI_x(x, X_train, Z_values, sigma_hats, start_values[j], alpha, E)
+        CI[j, 0] = lowerbound
+        CI[j, 1] = upperbound
+    if give_E_matrices:
+        return CI, E_matrices
+    else:
+        return CI
+
+
+def CI_intervals_NN(model, X, X_train, Y_train, alpha, rho, give_E_matrices=False):
+    CI = np.zeros((len(X), 2))
+    predictions = model.predict(X_train)
+    model2 = deepcopy(model)
+
+    # freeze the variance neurons
+    for layer in model2.layers:
+        if layer.name[0] == 'v':
+            layer.trainable = False
+
+    ## Add a point to the data set
+
+    ## Continue training
+
+    ## Have new predictions
+
+    ## Test linear combinations
+
+    mu_hats_original = predictions[:, 0]
+    start_values = model.predict(X)[:, 0]
+    sigma_hats = np.sqrt(np.exp(predictions[:, 1]) + 1e-6)  # todo, fix this my new formulations uses a different variance transform
+    Z_values = (mu_hats - Y_train) / sigma_hats
+    E_matrices = []
+    for j, x in enumerate(X):
+        A = get_second_derivative_matrix(model, x)
+        E = get_E(A, rho)
+        E_matrices.append(E)
+        lowerbound, upperbound = CI_x(x, X_train, Z_values, sigma_hats, start_values[j], alpha, E)
+        CI[j, 0] = lowerbound
+        CI[j, 1] = upperbound
+    if give_E_matrices:
+        return CI, E_matrices
+    else:
+        return CI
+
+
 
 
 
@@ -68,24 +111,41 @@ def golden_search(X_train, Z, sigma_hats, x_0, alpha, E, right_bound=0.5, positi
 
 
 
+# def accept(X_train, Z, sigma_hats, x_0, delta, alpha, E, positive=True):
+#     g = get_perturbation_function(x_0, delta, E)
+#     C_values = np.array(list(map(g, X_train))) / sigma_hats
+#     if positive:
+#         constant = np.sum(C_values ** 2)
+#         T = np.sum(C_values * Z) + constant
+#     if not positive:
+#         constant = np.sum(C_values ** 2)
+#         T = -np.sum(C_values * Z) + constant
+#     assert np.shape(C_values) == np.shape(Z)
+#     if constant == 0.0:
+#         return 1
+#     critical_value = scipy.stats.norm(loc=0, scale=np.sqrt(constant)).ppf(1 - alpha)
+#     if T > critical_value:
+#         return 0
+#     else:
+#         return 1
+
 def accept(X_train, Z, sigma_hats, x_0, delta, alpha, E, positive=True):
     g = get_perturbation_function(x_0, delta, E)
     C_values = np.array(list(map(g, X_train))) / sigma_hats
     if positive:
         constant = np.sum(C_values ** 2)
-        T = np.sum(C_values * Z) + constant
+        T = np.sum(-C_values * Z) - 0.5 * constant
     if not positive:
         constant = np.sum(C_values ** 2)
-        T = -np.sum(C_values * Z) + constant
+        T = np.sum(C_values * Z) - 0.5 * constant
     assert np.shape(C_values) == np.shape(Z)
     if constant == 0.0:
         return 1
-    critical_value = scipy.stats.norm(loc=0, scale=np.sqrt(constant)).ppf(1 - alpha)
-    if T > critical_value:
+    critical_value = np.log(alpha / (1 - alpha))
+    if T < critical_value:
         return 0
     else:
         return 1
-
 
 def get_perturbation_function(x_0, delta, E):
     shape_x_0 = np.shape(x_0)

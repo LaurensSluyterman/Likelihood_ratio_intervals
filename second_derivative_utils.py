@@ -9,7 +9,7 @@ def get_gradient(x, model):
     gradient = tf.gradients(out, x)
     return gradient
 
-def get_var(x, model, std=1, B=100):
+def get_var(x, model, std=0.1, B=100):
     try:
         x_tensor = tf.constant(x, shape=(1, np.shape(x)[0]), dtype=tf.float32)
     except IndexError:
@@ -96,4 +96,16 @@ def get_E(A, norm):
         D_matrix[i, i] = c * np.abs(value)
     E = eigen_vectors @ D_matrix @ np.linalg.inv(eigen_vectors)
     return E
+
+@tf.function
+def get_weight_gradient(x, model):
+    out = model(x)
+    gradient = tf.gradients(out, model.trainable_weights)
+    return gradient
+
+
+
+def inner_product(grad_list_1, grad_list_2):
+    individual_products = [grad_1 @ np.transpose(grad_2) for grad_1, grad_2 in zip(grad_list_1, grad_list_2)]
+    return np.sum(individual_products)
 
