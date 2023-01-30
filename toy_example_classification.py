@@ -1,7 +1,10 @@
 import numpy as np
-
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 def p(x):
-    return 0.5 + 0.4*np.cos(2*x)
+    return 0.5 + 0.4*np.cos(6*x)
 
 n = 300
 x_train = np.hstack((np.random.uniform(0, 0.2, n), np.random.uniform(0.8,1, n)))
@@ -43,13 +46,13 @@ CI_classificationx(model=model, x=np.array([0.1]), X_train=x_train,
                           n_steps=100, alpha=0.05, n_epochs=200, fraction=0.2)
 
 
-x_lin = np.linspace(-0.8, 1.8, 40)
+x_lin = np.linspace(-0.8, 1.8, 30)
 CIs = np.zeros((len(x_lin), 2))
 for i, x in enumerate(x_lin):
     print(i+1)
     CIs[i, 0], CIs[i, 1] = CI_classificationx(model=model, x=x_lin[i], X_train=x_train,
                           Y_train=y_train, p_hats=model.predict(x_train),
-                          n_steps=100, alpha=0.05, n_epochs=150, fraction=0.2,
+                          n_steps=100, alpha=0.2, n_epochs=150, fraction=0.2,
                                               verbose=0)
 
 p_hat = tf.math.sigmoid(model.predict(x_lin))
