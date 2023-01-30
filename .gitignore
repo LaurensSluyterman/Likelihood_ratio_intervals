@@ -2,7 +2,7 @@
 .idea/
 __pycache__/
 _SHELVE_LOCATION
-savedneetworks/
+models/
 Distribution check.py
 Results/
 UCI_Datasets/
