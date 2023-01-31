@@ -34,6 +34,7 @@ y_train_0 = np.zeros(len(x_train_0))
 y_train_1 = np.ones(len(x_train_1))
 
 x_train_7 = x_train[np.where(y_train==7)]
+x_train_4 = x_train[np.where(y_train==4)]
 x_test_0 = x_train[np.where(y_test==0)]
 x_test_1 = x_train[np.where(y_test==1)]
 y_test_0 = np.zeros(len(x_train_0))
@@ -53,8 +54,8 @@ model.add(Conv2D(28, kernel_size=(3,3), input_shape=input_shape))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
 model.add(Dense(20, activation='relu',
-          kernel_regularizer=tf.keras.regularizers.l2(l=0.1)))
-model.add(Dense(1, kernel_regularizer=tf.keras.regularizers.l2(l=0.1)))
+          kernel_regularizer=tf.keras.regularizers.l2(l=0.01)))
+model.add(Dense(1, kernel_regularizer=tf.keras.regularizers.l2(l=0.00)))
 
 model.compile(optimizer='adam',
               loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
