@@ -3,16 +3,16 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from intervals_classification import CI_classificationx
 def p(x):
     return 0.5 + 0.4*np.cos(6*x)
 
-n = 300
+n = 50
 x_train = np.hstack((np.random.uniform(0, 0.2, n), np.random.uniform(0.8,1, n)))
 x_train = np.reshape(x_train, (len(x_train), 1))
 y_train = np.random.binomial(1, p=p(x_train))
 x_lin = np.linspace(0, 1, 50)
 plt.plot(x_train, y_train, 'o')
-plt.plot(np.linspace(0, 1, 50), tf.math.sigmoid(alternative_network_positive.predict(np.linspace(0, 1, 50)))[:, 0], 'o')
 plt.plot(np.linspace(0, 1, 50), p(np.sort(np.linspace(0, 1, 50))))
 plt.show()
 
@@ -31,7 +31,7 @@ def get_model():
                   loss=tf.keras.losses.BinaryCrossentropy(from_logits=True, label_smoothing=0),
                   metrics=['accuracy'])
 
-    model.fit(x=x_train, y=y_train, epochs=100)
+    model.fit(x=x_train, y=y_train, epochs=300)
     return model
 
 model = get_model()
