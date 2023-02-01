@@ -33,3 +33,9 @@ def CI_coverage_probability(intervals, true_values):
     upper_correct = intervals[:, 1] > true_values
     intervals_correct = lower_correct * upper_correct
     return intervals_correct
+
+def sigmoid(x):
+    if x > 0:
+        return np.exp(x) / (1 + np.exp(x))
+    else:
+        return 1 / (1 + np.exp(-x))
