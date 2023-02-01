@@ -10,7 +10,7 @@ def p(x):
 n = 50
 x_train = np.hstack((np.random.uniform(0, 0.2, n), np.random.uniform(0.8,1, n)))
 x_train = np.reshape(x_train, (len(x_train), 1))
-y_train = np.random.binomial(1, p=p(x_train))
+y_train = np.random.binomial((1), p=p(x_train))[:, 0]
 x_lin = np.linspace(0, 1, 50)
 plt.plot(x_train, y_train, 'o')
 plt.plot(np.linspace(0, 1, 50), p(np.sort(np.linspace(0, 1, 50))))
@@ -19,14 +19,13 @@ plt.show()
 def get_model():
     model = Sequential()
     model.add(Dense(30, activation='elu', input_shape=(1, ),
-                    kernel_regularizer=tf.keras.regularizers.l2( l=0.00)))
+                    kernel_regularizer=tf.keras.regularizers.l2(l=0.00)))
     model.add(Dense(30, activation='elu',
-                    kernel_regularizer=tf.keras.regularizers.l2( l=0.00)))
+                    kernel_regularizer=tf.keras.regularizers.l2(l=0.00)))
     model.add(Dense(30, activation='elu',
-                    kernel_regularizer=tf.keras.regularizers.l2( l=0.00)))
+                    kernel_regularizer=tf.keras.regularizers.l2(l=0.00)))
     model.add(Dense(1,
-                    kernel_regularizer=tf.keras.regularizers.l2( l=0.00)))
-
+                    kernel_regularizer=tf.keras.regularizers.l2(l=0.00)))
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.BinaryCrossentropy(from_logits=True, label_smoothing=0),
                   metrics=['accuracy'])
@@ -43,7 +42,7 @@ plt.show()
 
 CI_classificationx(model=model, x=np.array([0.1]), X_train=x_train,
                           Y_train=y_train, p_hats=model.predict(x_train),
-                          n_steps=100, alpha=0.05, n_epochs=200, fraction=0.2)
+                          n_steps=100, alpha=0.05, n_epochs=2, fraction=0.2)
 
 
 x_lin = np.linspace(-0.8, 1.8, 30)

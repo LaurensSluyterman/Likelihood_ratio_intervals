@@ -8,9 +8,12 @@ from tensorflow.keras.models import Sequential
 def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
                        n_steps, alpha, n_epochs, fraction,
                        verbose=True, from_sigmoid=True):
+    # Copying the model
     model.save('./models/tempmodel.h5', overwrite=True)
     alternative_network_positive = tf.keras.models.load_model('./models/tempmodel.h5')
     alternative_network_negative = tf.keras.models.load_model('./models/tempmodel.h5')
+
+    # Letting the networks train on to get close to a 0 and 1 prediction
     x = np.array([x])
     start_value = model.predict(x)
     if not from_sigmoid:
@@ -21,6 +24,7 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
     positive_labels = np.array([1 for _ in range(np.int(N * fraction))])
     negative_labels = np.array([0 for _ in range(np.int(N * fraction))])
     probs = tf.math.sigmoid(p_hats)[:, 0].numpy()
+    # We repeat the targets by the predictions of the model to prevent overfitting
     Y_train_positive = np.hstack((probs, positive_labels))
     Y_train_negative = np.hstack((probs, negative_labels))
     X_train_new = np.vstack((X_train, x_multiple_copies))
@@ -28,12 +32,15 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
                                      verbose=verbose, batch_size=None)
     alternative_network_negative.fit(X_train_new, Y_train_negative, epochs=n_epochs,
                                      verbose=verbose, batch_size=None)
+
+    # The maximum and minimum achieved probability predictions
     max_value = alternative_network_positive.predict(np.array([x]))
     min_value = alternative_network_negative.predict(np.array([x]))
 
     perturbed_predictions_positive = alternative_network_positive.predict(X_train)
     perturbed_predictions_negative = alternative_network_negative.predict(X_train)
 
+    # If interpolating after the sigmoid, we transform everything to probabilities
     if not from_sigmoid:
         perturbed_predictions_positive = tf.math.sigmoid(perturbed_predictions_positive)[:, 0].numpy()
         perturbed_predictions_negative = tf.math.sigmoid(perturbed_predictions_negative)[:, 0].numpy()
@@ -41,30 +48,29 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
         min_value = sigmoid(alternative_network_negative.predict(np.array([x])))
         p_hats = probs
 
-
+    # Checking which alternatives still get accepted
     Y_train_reshaped = np.reshape(Y_train, (len(Y_train), 1))
     upperbound = start_value
     lowerbound = start_value
     accepting = True
     l = 1 / n_steps
-    #Todo: transform p_tildes and p_hats to probabilities first and change the bce to not from logits
+
+    # The positive direction (probabilities closer to 1)
     while accepting:
         p_tildes = l * perturbed_predictions_positive + (1-l) * p_hats
-        # p_tildes = np.clip(p_tildes, a_min=0.0000001, a_max=0.999999999)
         accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha,
                                              from_sigmoid=from_sigmoid)
         if accepting:
+            # Update the upperbound
             upperbound = start_value * (1-l) + l * max_value
-            # if l > 1:
-            #     upperbound = [[1]]
-            #     accepting = 0
+
+            # A stop criterium when the upper or lowerbound reaches 1 or 0.
             if l > 1:
                 if 0.999 < sigmoid(upperbound) or sigmoid(upperbound) < 0.0001:
                     accepting = 0
             l += 1 / n_steps
-            # if l > 1:
-            #     accepting = 0
 
+    # The negative direction
     accepting = True
     l = 1 / n_steps
     while accepting:
@@ -73,17 +79,13 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
                                              from_sigmoid=from_sigmoid)
         if accepting:
             lowerbound = start_value * (1-l) + l * min_value
-            # if lowerbound < 0:
-            #     lowerbound = [[0]]
-            #     accepting = 0
-
+            # A stop criterium when the upper or lowerbound reaches 1 or 0.
             if l>1:
                 if 0.999 < sigmoid(lowerbound) or sigmoid(lowerbound) < 0.0001:
                     accepting = 0
             l += 1 / n_steps
-            # if l>1:
-            #     accepting = 0
 
+    # Deleting the new networks to alleviate some memory issues
     del alternative_network_positive, alternative_network_negative
     if from_sigmoid:
         lowerbound = sigmoid(lowerbound)
