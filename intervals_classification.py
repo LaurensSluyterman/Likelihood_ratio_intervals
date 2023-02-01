@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Sequential
+from utils import sigmoid
 
 
 
@@ -109,11 +110,6 @@ def loglikelihood(y, p, from_sigmoid=True):
     return np.sum(loglik)
 
 
-def sigmoid(x):
-    if x > 0:
-        return np.exp(x) / (1 + np.exp(x))
-    else:
-        return 1 / (1 + np.exp(-x))
 
 
 # np.exp(loglikelihood(Y_train_reshaped, p_tildes)
