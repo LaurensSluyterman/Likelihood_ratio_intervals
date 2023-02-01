@@ -172,7 +172,7 @@ def get_perturbation_function(x_0, delta, E):
 #     return C
 #
 #
-# def LR(y, mu_0, mu_hat, sigma):
+# def loglikelihoodratio(y, mu_0, mu_hat, sigma):
 #     return 2 * (- 0.5 * np.sum(((y - mu_hat) / sigma)**2) + 0.5 * np.sum(((y - mu_0) / sigma)**2))
 
 
@@ -248,7 +248,7 @@ def get_perturbation_function(x_0, delta, E):
 #         mu_0 = mu_hats + np.array(list(map(g, X)))
 #     if not positive:
 #         mu_0 = mu_hats - np.array(list(map(g, X)))
-#     ratio = LR(Y, mu_0, mu_hats, sigma_hats)
+#     ratio = loglikelihoodratio(Y, mu_0, mu_hats, sigma_hats)
 #   #  q = scipy.stats.chi2(1).ppf(1 - alpha / 2)
 #     C = get_C(sigma_hats, g, X)
 #     critical_value = scipy.stats.norm(loc=-C, scale=2*np.sqrt(C)).ppf(1 - alpha)
