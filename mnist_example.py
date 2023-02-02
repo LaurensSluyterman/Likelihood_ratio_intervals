@@ -15,17 +15,15 @@ data = mnist.load_data()
 np.shape(x_train[0])
 x_train = x_train.reshape(x_train.shape[0], 28, 28, 1)
 x_test = x_test.reshape(x_test.shape[0], 28, 28, 1)
-x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5)
 
 # Convert to float
 x_train = x_train.astype('float32')
 x_test = x_test.astype('float32')
-x_val = x_val.astype('float32')
 
 # Normalize
-x_train /= 255
-x_test /= 255
-x_val /= 255
+x_train /= 255.
+x_test /= 255.
+
 
 # Create a dataset containing only classes 0 and 1
 x_train_0 = x_train[np.where(y_train==0)]
@@ -40,20 +38,21 @@ x_test_1 = x_train[np.where(y_test==1)]
 y_test_0 = np.zeros(len(x_train_0))
 y_test_1 = np.ones(len(x_test_1))
 
-x_train01 = np.vstack((x_train_0, x_train_1))
-y_train01 = np.hstack((y_train_0, y_train_1))
+x_train_01 = np.vstack((x_train_0, x_train_1))
+y_train_01 = np.hstack((y_train_0, y_train_1))
 
-x_test01 = np.vstack((x_test_0, x_test_1))
-y_test01 = np.hstack((y_test_0, y_test_1))
-
-
+x_test_01 = np.vstack((x_test_0, x_test_1))
+y_test_01 = np.hstack((y_test_0, y_test_1))
+#%%
+plt.imshow(x_train_0[0])
+plt.show()
 #%% Create and train a basic CNN
 input_shape = (28, 28, 1)
 model = Sequential()
 model.add(Conv2D(28, kernel_size=(3,3), input_shape=input_shape))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
-model.add(Dense(20, activation='relu',
+model.add(Dense(2, activation='relu',
           kernel_regularizer=tf.keras.regularizers.l2(l=0.01)))
 model.add(Dense(1, kernel_regularizer=tf.keras.regularizers.l2(l=0.00)))
 
@@ -61,27 +60,25 @@ model.compile(optimizer='adam',
               loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
-model.fit(x=x_train01, y=y_train01, epochs=5)
+model.fit(x=x_train_01, y=y_train_01, epochs=5)
 
 model.save('./models/basicCNN')
 #%%
 
 
 model = tf.keras.models.load_model('./models/basicCNN')
-CI_classificationx(model=model, x=x_train_7[20], X_train=x_train01,
-                          Y_train=y_train01, p_hats=model.predict(x_train01),
-                          n_steps=100, alpha=0.2, n_epochs=1, fraction=0.1)
+CI_classificationx(model=model, x=x_train_7[20], X_train=x_train_01,
+                   Y_train=y_train_01, p_hats=model.predict(x_train_01),
+                   n_steps=150, alpha=0.2, n_epochs=2, fraction=0.1)
 
-CI_classificationx(model=model, x=x_test01[2], X_train=x_train01,
-                          Y_train=y_train01, p_hats=model.predict(x_train01),
-                          n_steps=100, alpha=0.2, n_epochs=1, fraction=0.1)
+CI_classificationx(model=model, x=x_test_01[2], X_train=x_train_01,
+                   Y_train=y_train_01, p_hats=model.predict(x_train_01),
+                   n_steps=150, alpha=0.2, n_epochs=2, fraction=0.1)
 
-CI_classificationx(model=model, x=x_train01[20], X_train=x_train01,
-                          Y_train=y_train01, p_hats=model.predict(x_train01),
-                          n_steps=100, alpha=0.2, n_epochs=1, fraction=0.1)
+CI_classificationx(model=model, x=x_train_01[0], X_train=x_train_01,
+                   Y_train=y_train_01, p_hats=model.predict(x_train_01),
+                   n_steps=150, alpha=0.2, n_epochs=2, fraction=0.1)
 
-print(sigmoid(b))
-print(sigmoid(l))
 
 #%%
 
