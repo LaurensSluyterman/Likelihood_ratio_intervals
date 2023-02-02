@@ -58,6 +58,8 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
 
     # The positive direction (probabilities closer to 1)
     while accepting:
+        if start_value > max_value:
+            break
         p_tildes = l * perturbed_predictions_positive + (1-l) * p_hats
         accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha,
                                              from_sigmoid=from_sigmoid)
@@ -75,6 +77,8 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
     accepting = True
     l = 1 / n_steps
     while accepting:
+        if start_value < min_value:
+            break
         p_tildes = l * perturbed_predictions_negative + (1 - l) * p_hats
         accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha,
                                              from_sigmoid=from_sigmoid)
