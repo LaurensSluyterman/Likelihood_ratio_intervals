@@ -33,8 +33,8 @@ y_train_1 = np.ones(len(x_train_1))
 
 x_train_7 = x_train[np.where(y_train==7)]
 x_train_4 = x_train[np.where(y_train==4)]
-x_test_0 = x_train[np.where(y_test==0)]
-x_test_1 = x_train[np.where(y_test==1)]
+x_test_0 = x_test[np.where(y_test==0)]
+x_test_1 = x_test[np.where(y_test==1)]
 y_test_0 = np.zeros(len(x_train_0))
 y_test_1 = np.ones(len(x_test_1))
 
