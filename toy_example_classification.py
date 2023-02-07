@@ -1,17 +1,17 @@
 import numpy as np
 import tensorflow as tf
+import matplotlib
 import matplotlib.pyplot as plt
 import scipy
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from intervals_classification import CI_classificationx
 from scipy import stats
-from utils import
-import matplotlib
-matplotlib.use("TkAgg")
+from utils import sigmoid
+# matplotlib.use("TkAgg")
 plt.rcParams['text.usetex'] = True
 plt.rcParams["font.size"] = 17
-plt.rcParams['axes.linewidth'] = 0.2
+plt.rcParams['axes.linewidth'] = 1
 #%% Generate a data set
 def p(x):
     return 0.5 + 0.4*np.cos(6*x)
@@ -61,9 +61,9 @@ plt.tight_layout()
 plt.show()
 
 #%% A single prediction
-CI_classificationx(model=model, x=np.array([0.1]), X_train=x_train,
+CI_classificationx(model=model, x=np.array([1.8]), X_train=x_train,
                    Y_train=y_train, p_hats=model.predict(x_train),
-                   n_steps=100, alpha=0.05, n_epochs=2, fraction=0.2)
+                   n_steps=100, alpha=0.1, n_epochs=150, fraction=0.2)
 
 #%% Creating CIs for a test set
 x_lin = np.linspace(-0.8, 1.8, 50)
@@ -98,19 +98,21 @@ CI_ensemble = np.zeros((len(x_lin), 2))
 p_hats_ensemble = np.zeros((len(x_lin)))
 for i, x in enumerate(x_lin):
     print(i+1)
-    t = scipy.stats.t(df=9).ppf(1-0.05/2)
+    t = scipy.stats.t(df=9).ppf(1-0.1/2)
     predictions = [sigmoid(model.predict(np.array([x]))) for model in ensemble]
     var = np.var(predictions)
     mean = np.mean(predictions)
-    CI_ensemble[i, 0] = mean - t * np.sqrt(var / len(ensemble))
-    CI_ensemble[i, 1] = mean + t * np.sqrt(var / len(ensemble))
+    CI_ensemble[i, 0] = mean - t * np.sqrt(var)
+    CI_ensemble[i, 1] = mean + t * np.sqrt(var)
     p_hats_ensemble[i] = mean
 
 #%% Visualizing the results
 plt.plot(x_train, y_train, 'o')
-plt.plot(x_lin, p(x_lin), label='p(x)')
-plt.plot(x_lin, p_hats_ensemble, label='p_hat(x)')
-plt.fill_between(x_lin, CI_ensemble[:, 0], CI_ensemble[:, 1], color='blue', alpha=0.2, linewidth=0.1, label='CI')
-plt.xlabel('x')
-plt.legend()
+plt.plot(x_lin, p(x_lin), label=r'$p(x)$')
+plt.plot(x_lin, p_hats_ensemble, label=r'$\hat{p}(x)$')
+plt.fill_between(x_lin, CI_ensemble[:, 0], CI_ensemble[:, 1], color='blue', alpha=0.2, linewidth=0.1, label=r'CI')
+plt.legend(loc='center', bbox_to_anchor=(0.5, 1.1), ncol=3)
+plt.xlabel(r'$x$')
+plt.ylabel(r'$p(x)$')
+plt.tight_layout()
 plt.show()
