@@ -37,7 +37,7 @@ class MVENetwork:
 
     def __init__(self, *, X, Y, n_hidden_mean, n_hidden_var, n_epochs,
                  reg_mean=0, reg_var=0, batch_size=None, verbose=False,
-                 normalization=True, warmup=False, fixed_mean=True):
+                 normalization=True, warmup=False, fixed_mean=False):
         """
         Arguments:
             X: The unnormalized training covariates.
@@ -119,12 +119,14 @@ class MVENetwork:
             X_train = normalize(X_train, self._X_mean, self._X_std)
             Y_train = normalize(Y_train, self._Y_mean, self._Y_std)
         model_original = self.model
+
+        # Freeze the variance layers
+        for layer in model_original.layers:
+            if layer.name[0] == 'v':
+                layer.trainable = False
         model_original.save('./models/tempmodel.h5', overwrite=True)
         model = tf.keras.models.load_model('./models/tempmodel.h5',
                                            custom_objects={"negative_log_likelihood": negative_log_likelihood})
-        for layer in model.layers:
-            if layer.name[0] == 'v':
-                layer.trainable = False
         N = len(Y_train)
         if positive:
             y_new = model.predict(x_new)[:, 0] + step
