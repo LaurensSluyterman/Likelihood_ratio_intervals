@@ -52,7 +52,7 @@ for i, x in enumerate(x_val):
                                               verbose=0)
 
 #%% Saving the results
-with open('./Results/twomoon.pickle', 'wb') as handle:
+with open('./Results/twomoon-low-reg-500epoch.pickle', 'wb') as handle:
     pickle.dump({'confidence_intervals': CIs, 'locations':x_val}, handle)
 
 #%%
