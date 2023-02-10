@@ -6,8 +6,7 @@ from mve_network import MVENetwork
 from metrics import CI_coverage_probability
 matplotlib.use("TkAgg")
 matplotlib.rcParams['text.usetex'] = True
-matplotlib.rcParams['font.family'] = 'Avenir'
-plt.rcParams['font.size'] = 22
+plt.rcParams['font.size'] = 17
 plt.rcParams['axes.linewidth'] = 0.2
 
 
@@ -19,35 +18,45 @@ Y = np.random.normal(loc=2*X**2, scale=0.1)
 X = np.reshape(X, (80, 1))
 
 #%% Training a model
-model = MVENetwork(X=X, Y=Y, n_hidden_mean=np.array([40, 30, 20]), n_hidden_var=np.array([5]),
-                     n_epochs=200, verbose=1, normalization=True)
+model = MVENetwork(X=X, Y=Y, n_hidden_mean=np.array([40, 30, 20]),
+                   n_hidden_var=np.array([5, 2]),
+                   n_epochs=200, verbose=1, normalization=True,
+                   reg_mean=1e-4, reg_var=1e-4,
+                   warmup=True, fixed_mean=False)
 
 #%% Visualizing the perturbation
+x_star = 0.0
+delta = 1
+model.train_on(x_new=x_star, X_train=X, Y_train=Y, positive=True, step=delta, n_epochs=100,
+               verbose=1)
 x_test = np.linspace(-1.2, 1.2, 100)
-plt.title(f'delta={delta}')
-plt.plot(x_test, model.f_perturbed(x_test, positive=True), label='perturbed')
-plt.plot(x_test, model.f(x_test), label='original')
-plt.axvline(x_star)
 plt.plot(X, Y, 'o')
-plt.legend()
-plt.show()
-
-
-#%% Creating confidence intervals
-x_test = np.linspace(-1.2, 1.2, 20)
-CI = CI_NN(MVE_network=model, X=x_test, X_train=X, Y_train=Y, alpha=0.2,
-           n_steps=30, n_epochs=100, step=0.4)
-
-#%% Visualizing the confidence intervals
-plt.figure(figsize=(9,6), dpi=120)
-plt.title(r'$80\%$ CI')
-plt.fill_between(x_test, CI[:, 0], CI[:, 1], color='blue', alpha=0.2, linewidth=0.1, label=0.2)
-plt.plot(X, Y, 'o', alpha=0.2)
-plt.plot(x_test, model.f(x_test), label=r'$\hat{\mu}$')
-plt.plot(x_test, 2*x_test**2, linestyle='--', label=r'$\mu$')
+plt.plot(x_test, 2*x_test**2, linestyle='--', label=r'$f(x)$')
+plt.plot(x_test, model.f(x_test), label=r'$\hat{f}(x)$')
+plt.plot(x_test, model.f_perturbed(x_test, positive=True), label=r'$\tilde{f}(x)$')
+# plt.axvline(x_star, linestyle='dashed')
+plt.legend(loc='center', bbox_to_anchor=(0.5, 1.1), ncol=3)
 plt.xlabel(r'$x$')
 plt.ylabel(r'$y$')
-plt.legend()
+plt.tight_layout()
+plt.show()
+
+model.positive_model.predict(x_test) - model.model.predict(x_test)
+
+#%% Creating confidence intervals
+x_test = np.linspace(-1.3, 1.3, 50)
+CI = CI_NN(MVE_network=model, X=x_test, X_train=X, Y_train=Y, alpha=0.1,
+           n_steps=100, n_epochs=200, step=0.5)
+
+#%% Visualizing the confidence intervals
+# plt.figure(figsize=(9,6), dpi=120)
+plt.fill_between(x_test, CI[:, 0], CI[:, 1], color='blue', alpha=0.2, linewidth=0.1, label=r'CI')
+plt.plot(X, Y, 'o', alpha=0.2)
+plt.plot(x_test, 2*x_test**2, linestyle='--', label=r'$f(x)$')
+plt.plot(x_test, model.f(x_test), label=r'$\hat{f}(x)$')
+plt.xlabel(r'$x$')
+plt.ylabel(r'$y$')
+plt.legend(loc='center', bbox_to_anchor=(0.5, 1.1), ncol=3)
 plt.tight_layout()
 plt.show()
 
