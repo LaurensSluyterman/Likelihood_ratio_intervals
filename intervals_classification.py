@@ -6,7 +6,7 @@ from utils import sigmoid
 
 
 def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
-                       n_steps, alpha, n_epochs, fraction, weight,
+                       n_steps, alpha, n_epochs, fraction, weight=5,
                        compile=False, optimizer='Adam', verbose=True, from_sigmoid=True):
     # Copying the model
     model.save('./models/tempmodel.h5', overwrite=True)
@@ -66,8 +66,7 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
         if start_value > max_value:
             break
         p_tildes = l * perturbed_predictions_positive + (1-l) * p_hats
-        accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha,
-                                             from_sigmoid=from_sigmoid)
+        accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha)
         if accepting:
             # Update the upperbound
             upperbound = start_value * (1-l) + l * max_value
@@ -85,8 +84,7 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
         if start_value < min_value:
             break
         p_tildes = l * perturbed_predictions_negative + (1 - l) * p_hats
-        accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha,
-                                             from_sigmoid=from_sigmoid)
+        accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha)
         if accepting:
             lowerbound = start_value * (1-l) + l * min_value
             # A stop criterium when the upper or lowerbound reaches 1 or 0.
