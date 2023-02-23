@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 
 
 l2 = keras.regularizers.l2
-optimizer = tf.keras.optimizers.Adam(clipvalue=5,)
+
 
 class MVENetwork:
     """
@@ -113,7 +113,8 @@ class MVENetwork:
             return predictions
 
     def train_on(self, *, x_new, X_train, Y_train, positive=True, step=2,
-                 batch_size=None, n_epochs=40, verbose=False, fraction=0.1):
+                 batch_size=None, n_epochs=40, verbose=False, fraction=1/16,
+                 weight=1):
         if self._normalization is True:
             x_new = normalize(x_new, self._X_mean, self._X_std)
             X_train = normalize(X_train, self._X_mean, self._X_std)
@@ -126,20 +127,21 @@ class MVENetwork:
         model_original.save('./models/tempmodel.h5', overwrite=True)
         model = tf.keras.models.load_model('./models/tempmodel.h5',
                                            custom_objects={"negative_log_likelihood": negative_log_likelihood})
+        optimizer = tf.keras.optimizers.Adam(clipvalue=5, )
         model.compile(loss=negative_log_likelihood, optimizer=optimizer)
         N = len(Y_train)
         if positive:
-            y_new = model.predict(x_new)[:, 0] + step
+            y_new = model.predict(x_new, verbose=0)[:, 0] + step
         else:
-            y_new = model.predict(x_new)[:, 0] - step
+            y_new = model.predict(x_new, verbose=0)[:, 0] - step
         x_new = np.reshape(x_new, np.shape(X_train[0]))
         y_new = np.reshape(y_new, np.shape(Y_train[0]))
-        N_extra = np.int(N * fraction)
+        N_extra = int(N * fraction)
         x_new_multiple_copies = np.array([x_new for _ in range(N_extra)])
         y_new_multiple_copies = np.array([y_new for _ in range(N_extra)])
-        Y_train_new = np.hstack((model.predict(X_train)[:, 0], y_new_multiple_copies))
+        Y_train_new = np.hstack((model.predict(X_train, verbose=0)[:, 0], y_new_multiple_copies))
         X_train_new = np.vstack((X_train, x_new_multiple_copies))
-        sample_weights = np.hstack((np.ones(len(Y_train)), 5 / N_extra * np.ones(N_extra)))
+        sample_weights = np.hstack((np.ones(len(Y_train)), weight / N_extra * np.ones(N_extra)))
         model.fit(X_train_new, Y_train_new, batch_size=batch_size, epochs=n_epochs,
                   verbose=verbose, sample_weight=sample_weights)
         if positive:
@@ -205,6 +207,7 @@ def train_network(*, X_train, Y_train, n_hidden_mean, n_hidden_var, n_epochs,
         input_shape = np.shape(X_train)[1]
     except IndexError:
         input_shape = 1
+    optimizer = tf.keras.optimizers.Adam(clipvalue=5, )
     inputs = Input(shape=(input_shape,))
     inter_mean = Dense(n_hidden_mean[0], activation='elu',
                        kernel_regularizer=l2(reg_mean),
