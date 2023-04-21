@@ -2,12 +2,14 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Sequential
 from utils import sigmoid
+from copy import deepcopy
 
 
 
 def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
-                       n_steps, alpha, n_epochs, fraction, weight=5,
-                       compile=False, optimizer='Adam', verbose=True, from_sigmoid=True):
+                       n_steps, alpha, n_epochs, fraction, weight=1,
+                       compile=False, optimizer='Adam', verbose=True, from_sigmoid=True,
+                       batch_size=32):
     # Copying the model
     model.save('./models/tempmodel.h5', overwrite=True)
     alternative_network_positive = tf.keras.models.load_model('./models/tempmodel.h5')
@@ -34,17 +36,17 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
     positive_labels = np.array([1 for _ in range(N_extra)])
     negative_labels = np.array([0 for _ in range(N_extra)])
     probs = tf.math.sigmoid(p_hats)[:, 0].numpy()
-    # probs = [sigmoid(p)[0] for p in p_hats]
+    probs = [sigmoid(p)[0] for p in p_hats]
     # We replace the targets by the predictions of the model to prevent overfitting
     Y_train_positive = np.hstack((probs, positive_labels))
     Y_train_negative = np.hstack((probs, negative_labels))
     sample_weights = np.hstack((np.ones(len(probs)), weight / N_extra * np.ones(N_extra)))
     X_train_new = np.vstack((X_train, x_multiple_copies))
     alternative_network_positive.fit(X_train_new, Y_train_positive, epochs=n_epochs,
-                                     verbose=verbose, batch_size=int(32*(1+fraction)),
+                                     verbose=verbose, batch_size=int(batch_size*(1+fraction)),
                                      sample_weight=sample_weights)
     alternative_network_negative.fit(X_train_new, Y_train_negative, epochs=n_epochs,
-                                     verbose=verbose, batch_size=int(32*(1+fraction)),
+                                     verbose=verbose, batch_size=int(batch_size*(1+fraction)),
                                      sample_weight=sample_weights)
 
     # The maximum and minimum achieved probability predictions
@@ -59,39 +61,38 @@ def CI_classificationx(*, model, x, X_train, Y_train, p_hats,
     upperbound = start_value
     lowerbound = start_value
     accepting = True
-    l = 1 / n_steps
-
+    l = 0
+    sign = np.sign(max_value - start_value)
     # The positive direction (probabilities closer to 1)
     while accepting:
-        if start_value > max_value:
-            break
+        l += sign / n_steps
         p_tildes = l * perturbed_predictions_positive + (1-l) * p_hats
         accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha)
         if accepting:
             # Update the upperbound
             upperbound = start_value * (1-l) + l * max_value
 
-            # A stop criterium when the upper or lowerbound reaches 1 or 0.
-            if l > 1:
+            # A stop criterium when the upperbound reaches 1.
+            if np.abs(l) > 1:
                 if 0.999 < sigmoid(upperbound):
                     accepting = 0
-            l += 1 / n_steps
+
 
     # The negative direction
     accepting = True
-    l = 1 / n_steps
+    l = 0
+    sign = np.sign(start_value - min_value)
     while accepting:
-        if start_value < min_value:
-            break
+        l += sign / n_steps
         p_tildes = l * perturbed_predictions_negative + (1 - l) * p_hats
         accepting = accept_LR_classification(Y_train_reshaped, p_tildes, p_hats, alpha)
         if accepting:
             lowerbound = start_value * (1-l) + l * min_value
             # A stop criterium when the upper or lowerbound reaches 1 or 0.
-            if l>1:
+            if np.abs(l)>1:
                 if sigmoid(lowerbound) < 0.0001:
                     accepting = 0
-            l += 1 / n_steps
+
 
     # Deleting the new networks to alleviate some memory issues
     if from_sigmoid:
