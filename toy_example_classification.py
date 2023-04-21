@@ -11,7 +11,9 @@ from utils import sigmoid
 # matplotlib.use("TkAgg")
 plt.rcParams['text.usetex'] = True
 plt.rcParams["font.size"] = 17
-plt.rcParams['axes.linewidth'] = 1
+plt.rcParams['axes.linewidth'] = 0.2
+
+
 #%% Generate a data set
 def p(x):
     return 0.5 + 0.4*np.cos(6*x)
@@ -32,21 +34,25 @@ plt.show()
 
 
 #%% Train a model and visualize the predictions
+c_reg = 1e-4
+n_epochs = 300
+
+
 def get_model():
+    """Train simple network with three hidden layers"""
     model = Sequential()
     model.add(Dense(30, activation='elu', input_shape=(1, ),
-                    kernel_regularizer=tf.keras.regularizers.l2(l=0.0001)))
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
     model.add(Dense(30, activation='elu',
-                    kernel_regularizer=tf.keras.regularizers.l2(l=0.0001)))
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
     model.add(Dense(30, activation='elu',
-                    kernel_regularizer=tf.keras.regularizers.l2(l=0.0001)))
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
     model.add(Dense(1,
-                    kernel_regularizer=tf.keras.regularizers.l2(l=0.0001)))
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.BinaryCrossentropy(from_logits=True, label_smoothing=0),
                   metrics=['accuracy'])
-
-    model.fit(x=x_train, y=y_train, epochs=300)
+    model.fit(x=x_train, y=y_train, epochs=n_epochs)
     return model
 
 
@@ -61,25 +67,28 @@ plt.tight_layout()
 plt.show()
 
 #%% A single prediction
-CI_classificationx(model=model, x=np.array([1.8]), X_train=x_train,
-                   Y_train=y_train, p_hats=model.predict(x_train),
-                   n_steps=100, alpha=0.1, n_epochs=150, fraction=0.2)
+CI_classificationx(model=model, x=np.array([0]), X_train=x_train,
+                   Y_train=y_train, predicted_logits=model.predict(x_train),
+                   n_steps=100, alpha=0.1, n_epochs=500, fraction=1/16, weight=1)
 
 #%% Creating CIs for a test set
 x_lin = np.linspace(-0.8, 1.8, 50)
 CIs = np.zeros((len(x_lin), 2))
+p_hats = model.predict(x_train)
 for i, x in enumerate(x_lin):
     print(i+1)
     CIs[i, 0], CIs[i, 1] = CI_classificationx(model=model,
                                               x=x_lin[i],
                                               X_train=x_train,
                                               Y_train=y_train,
-                                              p_hats=model.predict(x_train),
-                                              n_steps=150,
+                                              predicted_logits=p_hats,
+                                              n_steps=100,
                                               alpha=0.1,
-                                              n_epochs=150,
-                                              fraction=0.2,
-                                              verbose=0)
+                                              n_epochs=n_epochs,
+                                              fraction=1/16,
+                                              verbose=0,
+                                              weight=1)
+
 #%% Visualizing the results
 p_hat = tf.math.sigmoid(model.predict(x_lin))
 plt.plot(x_train, y_train, 'o')
@@ -92,6 +101,7 @@ plt.ylabel(r'$p(x)$')
 plt.tight_layout()
 plt.show()
 plt.close()
+
 #%% Creating CIs using an ensemble
 ensemble = [get_model() for _ in range(10)]
 CI_ensemble = np.zeros((len(x_lin), 2))
@@ -106,7 +116,7 @@ for i, x in enumerate(x_lin):
     CI_ensemble[i, 1] = mean + t * np.sqrt(var)
     p_hats_ensemble[i] = mean
 
-#%% Visualizing the results
+#%% Visualizing the ensemble results
 plt.plot(x_train, y_train, 'o')
 plt.plot(x_lin, p(x_lin), label=r'$p(x)$')
 plt.plot(x_lin, p_hats_ensemble, label=r'$\hat{p}(x)$')
