@@ -1,17 +1,11 @@
-import keras.models
 import numpy as np
 import tensorflow.keras.backend as K
 import tensorflow as tf
-# tf.compat.v1.disable_eager_execution()  # Needed to prevent memory leaks
 import gc
 from tensorflow import keras
 from utils import normalize, reverse_normalized
 from keras.layers import Input, Dense, Concatenate, concatenate
 from keras.models import Model
-from keras.optimizers import Adam
-from sklearn.model_selection import train_test_split
-
-
 l2 = keras.regularizers.l2
 
 
@@ -37,7 +31,7 @@ class MVENetwork:
 
     def __init__(self, *, X, Y, n_hidden_mean, n_hidden_var, n_epochs,
                  reg_mean=0, reg_var=0, batch_size=None, verbose=False,
-                 normalization=True, warmup=False, fixed_mean=False):
+                 normalization=True):
         """
         Arguments:
             X: The unnormalized training covariates.
@@ -61,11 +55,6 @@ class MVENetwork:
             normalization (bool): Determines if the covariates and targets
                 are normalized before training. This normalization is
                 reversed for the final predictions.
-            warmup (bool): Determines if the network first learns the
-                mean estimate. Default is False, the mean and variance
-                are updated simultaneously.
-            fixed_mean (bool): In case of a warmup, this determines if the
-                mean estimate is kept fixed during the second training phase.
         """
         self._normalization = normalization
 
@@ -83,9 +72,7 @@ class MVENetwork:
                               reg_var=reg_var,
                               batch_size=batch_size,
                               n_epochs=n_epochs,
-                              verbose=verbose,
-                              warmup=warmup,
-                              fixed_mean=fixed_mean)
+                              verbose=verbose,)
         self.model = model
 
     def f(self, X_test):
@@ -127,7 +114,7 @@ class MVENetwork:
         model_original.save('./models/tempmodel.h5', overwrite=True)
         model = tf.keras.models.load_model('./models/tempmodel.h5',
                                            custom_objects={"negative_log_likelihood": negative_log_likelihood})
-        optimizer = tf.keras.optimizers.Adam(clipvalue=5, )
+        optimizer = tf.keras.optimizers.Adam(clipvalue=0.1)
         model.compile(loss=negative_log_likelihood, optimizer=optimizer)
         N = len(Y_train)
         if positive:
@@ -167,7 +154,7 @@ class MVENetwork:
 
 def train_network(*, X_train, Y_train, n_hidden_mean, n_hidden_var, n_epochs,
                   loss, reg_mean=0, reg_var=0, batch_size=None,
-                  verbose=False, warmup=True, fixed_mean=False):
+                  verbose=False):
     """Train a network that outputs the mean and standard deviation.
 
     This function trains a network that outputs the mean and standard
@@ -194,11 +181,7 @@ def train_network(*, X_train, Y_train, n_hidden_mean, n_hidden_var, n_epochs,
             batch_size (int): The used batch size for training, if set to None
                 the standard size of 32 is used.
             verbose (bool): Determines if training progress is printed.
-            warmup (bool): Determines if the network first learns the
-                mean estimate. Default is False, the mean and variance
-                are updated simultaneously.
-            fixed_mean (bool): In case of a warmup, this determines if the
-                mean estimate is kept fixed during the second training phase.
+
     Returns:
         model: A trained network that outputs a mean and log of standard
             deviation.
@@ -207,7 +190,7 @@ def train_network(*, X_train, Y_train, n_hidden_mean, n_hidden_var, n_epochs,
         input_shape = np.shape(X_train)[1]
     except IndexError:
         input_shape = 1
-    optimizer = tf.keras.optimizers.Adam(clipvalue=5, )
+    optimizer = tf.keras.optimizers.Adam(clipvalue=0.1)
     inputs = Input(shape=(input_shape,))
     inter_mean = Dense(n_hidden_mean[0], activation='elu',
                        kernel_regularizer=l2(reg_mean),
@@ -233,41 +216,9 @@ def train_network(*, X_train, Y_train, n_hidden_mean, n_hidden_var, n_epochs,
     outputs = concatenate([output_mean, output_var])
     model = Model(inputs, outputs)
 
-    # Without a warmup, we simultaneously learn the mean and variance
-    if not warmup:
-        model.compile(loss=loss, optimizer=optimizer)
-        model.fit(X_train, Y_train, batch_size=batch_size, epochs=n_epochs,
-                  verbose=verbose)
-        return model
-
-    # Freeze the variance layers
-    for layer in model.layers:
-        if layer.name[0] == 'v':
-            layer.trainable = False
-
     model.compile(loss=loss, optimizer=optimizer)
     model.fit(X_train, Y_train, batch_size=batch_size, epochs=n_epochs,
-              verbose=verbose)
-    logmse = np.log(np.mean(np.square(model.predict(X_train, verbose=0)[:, 0] - Y_train)))
-
-    # Set the bias of the output variance to the logmse
-    model.layers[-2].set_weights([model.layers[-2].get_weights()[0], np.array([logmse])])
-
-    # Unfreerze the variance layers
-    for layer in model.layers:
-        layer.trainable = True
-
-    # Freeze the mean layers if desired
-    if fixed_mean:
-        for layer in model.layers:
-            if layer.name[0] == 'm':
-                layer.trainable = False
-
-    # Compile and train the final model
-    model.compile(loss=loss, optimizer=optimizer)
-    model.fit(X_train, Y_train, batch_size=batch_size, epochs=n_epochs,
-              verbose=verbose)
-
+               verbose=verbose)
     return model
 
 
