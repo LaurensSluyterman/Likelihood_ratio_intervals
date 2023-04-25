@@ -1,5 +1,7 @@
 import numpy as np
 import gc
+import scipy
+from scipy import stats
 
 
 def CI_NN(MVE_network, X, X_train, Y_train, alpha, n_steps=10,
@@ -81,8 +83,8 @@ def CI_NNx(*, MVE_network, x, X_train, Y_train, mu_hats, sigma_hats,
 
 def accept(Y, mu_0, mu_1, sigma, alpha):
     """Accept if the loglikelihoodratio < log(alpha)"""
-    ratio = loglikelihoodratio(Y, mu_0, mu_1, sigma)
-    if ratio < np.log(alpha):
+    ratio = - loglikelihoodratio(Y, mu_0, mu_1, sigma)
+    if 2*ratio > stats.chi2(1).ppf(1-alpha):
         return 0
     else:
         return 1
