@@ -1,7 +1,8 @@
 import tensorflow as tf
 import numpy as np
+import scipy
 from utils import sigmoid
-
+from scipy import stats
 
 def CI_classificationx(*, model, x, X_train, Y_train, predicted_logits,
                        n_steps, alpha, n_epochs, fraction, weight=1,
@@ -95,9 +96,10 @@ def CI_classificationx(*, model, x, X_train, Y_train, predicted_logits,
 
 
 def accept_LR_classification(Y_train, perturbed_logits, predicted_logits, alpha):
-    log_likelihood_difference = loglikelihood(Y_train, perturbed_logits) \
-                                - loglikelihood(Y_train, predicted_logits)
-    if log_likelihood_difference < np.log(alpha):
+    log_likelihood_difference = loglikelihood(Y_train, predicted_logits) \
+                                - loglikelihood(Y_train, perturbed_logits)
+    critical_value = stats.chi2(1).ppf(1-alpha)
+    if 2*log_likelihood_difference > critical_value:
         return 0
     else:
         return 1
