@@ -8,6 +8,9 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 from intervals_classification import CI_classificationx
 from utils import sigmoid
+plt.rcParams['text.usetex'] = True
+plt.rcParams["font.size"] = 15
+plt.rcParams['axes.linewidth'] = 0.7
 
 #%% Import and prepcrosess data
 data = mnist.load_data()
@@ -77,24 +80,24 @@ model.fit(x=x_train_01, y=y_train_01, epochs=5)
 #%% Save the model
 model.save('./models/CNNMnistmedium-1e-4-sgd')
 #%% Creating CIs for different inputs
-model = tf.keras.models.load_model('./models/CNNMnistmedium-1e-4-adam')
+model = tf.keras.models.load_model('./models/CNNMnistmedium-1e-4-sgd')
 
 # Training point
-print(CI_classificationx(model=model, x=x_train_01[0], X_train=x_train_01,
+print(CI_classificationx(model=model, x=x_train_01[-1], X_train=x_train_01,
                          Y_train=y_train_01, predicted_logits=model.predict(x_train_01),
-                         n_steps=200, alpha=0.1, n_epochs=5, fraction=1/16, compile=True,
+                         n_steps=200, alpha=0.05, n_epochs=5, fraction=1/16, compile=True,
                          optimizer='sgd'))
 
 # Test point
-print(CI_classificationx(model=model, x=x_test_01[0], X_train=x_train_01,
+print(CI_classificationx(model=model, x=x_test_01[-1], X_train=x_train_01,
                          Y_train=y_train_01, predicted_logits=model.predict(x_train_01),
-                         n_steps=200, alpha=0.1, n_epochs=5, fraction=1/16, compile=True,
+                         n_steps=200, alpha=0.05, n_epochs=5, fraction=1/16, compile=True,
                          optimizer='sgd'))
 
 # OoD point
-print(CI_classificationx(model=model, x=x_train_2[0], X_train=x_train_01,
+print(CI_classificationx(model=model, x=x_train_4[0], X_train=x_train_01,
                          Y_train=y_train_01, predicted_logits=model.predict(x_train_01),
-                         n_steps=200, alpha=0.1, n_epochs=5, fraction=1/16,
+                         n_steps=200, alpha=0.05, n_epochs=5, fraction=1/16,
                          verbose=1, compile=True, weight=1,
                          optimizer='sgd'))
 
@@ -109,7 +112,7 @@ for rotation in rotations:
     rotated_image = datagen.apply_transform(x=img, transform_parameters={'theta': rotation})
     CI = CI_classificationx(model=model, x=rotated_image, X_train=x_train_01,
                             Y_train=y_train_01, predicted_logits=model.predict(x_train_01),
-                            n_steps=150, alpha=0.1, n_epochs=5, fraction=1/16,
+                            n_steps=150, alpha=0.05, n_epochs=5, fraction=1/16,
                             weight=1,
                             compile=True)
     rotation_results[rotation] = CI
@@ -119,6 +122,7 @@ for rotation in rotations:
 lower_bounds = [a[0] for a in rotation_results.values()]
 upper_bounds = [a[1] for a in rotation_results.values()]
 p_hats = [sigmoid(p[0][0]) for p in predictions]
+plt.figure(dpi=200)
 plt.fill_between(rotations, lower_bounds, upper_bounds, interpolate=False, alpha=0.3)
 plt.plot(rotations, p_hats, color='red', linestyle='--', marker='o')
 plt.xlabel('rotation', fontsize=14)
@@ -129,6 +133,7 @@ plt.ylim((0, 1.05))
 plt.tight_layout()
 plt.show()
 
+#%%
 rotated_image = datagen.apply_transform(x=img, transform_parameters={'theta': 0})
 plt.imshow(rotated_image)
 plt.axis('off')
