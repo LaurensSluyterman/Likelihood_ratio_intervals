@@ -5,7 +5,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout, AveragePooling2D
 from keras.datasets import cifar10
 from adverserial_example_generation import generate_adversarial_example
-from intervals_classification import CI_classificationx
+from intervals_classification import CI_classificationx, CI_ensemble, CI_dropout
 
 
 #%% Data import and preprocessing
@@ -48,75 +48,80 @@ batch_size = 32
 n_epochs = 15
 optimizer = 'sgd'
 np.random.seed(2)
-model = Sequential()
-model.add(Conv2D(32, kernel_size=(3,3),
-                 input_shape=input_shape, activation='elu',
-                 kernel_regularizer=tf.keras.regularizers.l2(l=0)))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(32, kernel_size=(3,3), activation='elu',
-                 kernel_regularizer=tf.keras.regularizers.l2(l=0)))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Flatten())
-model.add(Dense(30, activation='elu',
-                kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
-model.add(Dense(30, activation='elu',
-                kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
-model.add(Dense(30, activation='elu',
-                kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
-model.add(Dense(1,
-                kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
+def train_model(c_reg, n_epochs, dropout_rate=0):
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3,3),
+                     input_shape=input_shape, activation='elu',
+                     kernel_regularizer=tf.keras.regularizers.l2(l=0)))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Conv2D(32, kernel_size=(3,3), activation='elu',
+                     kernel_regularizer=tf.keras.regularizers.l2(l=0)))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Flatten())
+    model.add(Dense(30, activation='elu',
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
+    model.add(Dropout(dropout_rate))
+    model.add(Dense(30, activation='elu',
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
+    model.add(Dropout(dropout_rate))
+    model.add(Dense(30, activation='elu',
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
+    model.add(Dropout(dropout_rate))
+    model.add(Dense(1,
+                    kernel_regularizer=tf.keras.regularizers.l2(l=c_reg)))
 
-model.compile(optimizer=optimizer,
-              loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-              metrics=['accuracy'])
+    model.compile(optimizer=optimizer,
+                  loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
 
-model.fit(x=x_train01, y=y_train01, epochs=n_epochs, batch_size=batch_size, validation_split=0)
+    model.fit(x=x_train01, y=y_train01, epochs=n_epochs, batch_size=batch_size, validation_split=0)
+    return model
 
-
+model = train_model(1e-5, 15)
 #%%
 model.save('./models/CNNcifar-1e-5-sgd-n15')
 #%% Calculating confidence intervals
-model = tf.keras.models.load_model('./models/CNNcifar-1e-4-sgd')
+model = tf.keras.models.load_model('./models/CNNcifar-1e-5-sgd-n15')
 
-print(CI_classificationx(model=model, x=x_train01[-1], X_train=x_train01,
+print(CI_classificationx(model=model, x=x_train01[-2], X_train=x_train01,
                          Y_train=y_train01, predicted_logits=model.predict(x_train01),
-                         n_steps=200, alpha=0.1, n_epochs=n_epochs, fraction=2/batch_size,
+                         n_steps=200, alpha=0.05, n_epochs=n_epochs, fraction=2/batch_size,
                          verbose=1, optimizer=optimizer,
                          weight=1))
 
-print(CI_classificationx(model=model, x=x_test01[-1], X_train=x_train01,
+print(CI_classificationx(model=model, x=x_test01[-2], X_train=x_train01,
                          Y_train=y_train01, predicted_logits=model.predict(x_train01),
-                         n_steps=200, alpha=0.1, n_epochs=n_epochs, fraction=2/batch_size,
+                         n_steps=200, alpha=0.05, n_epochs=n_epochs, fraction=2/batch_size,
                          verbose=1, optimizer=optimizer, compile=True,
                          batch_size=batch_size, weight=1))
 
 print(CI_classificationx(model=model, x=x_train_4[0], X_train=x_train01,
                          Y_train=y_train01, predicted_logits=model.predict(x_train01),
-                         n_steps=200, alpha=0.1, n_epochs=n_epochs, fraction=2/batch_size,
+                         n_steps=200, alpha=0.05, n_epochs=n_epochs, fraction=2/batch_size,
                          verbose=1, compile=True, optimizer=optimizer,
                          batch_size=batch_size, weight=1))
 
 
 #%% Display an image
-plt.imshow(x_test01[-1])
+plt.imshow(x_train01[-1])
 plt.show()
 
 #%% Adversarial example
-model = tf.keras.models.load_model('./models/CNNcifar-1e-5-sgd')
+model = tf.keras.models.load_model('./models/CNNcifar-1e-5-sgd-n15')
 
-x_normal = x_test01[-2]
-label = np.array([y_test01[-2]])
+x_normal = x_test01[0]
+label = np.array([y_test01[0]])
 x_adversarial = generate_adversarial_example(model, np.array([x_normal]),
                                              label, epsilon=0.03)
 
 print(CI_classificationx(model=model, x=x_normal, X_train=x_train01,
                          Y_train=y_train01, predicted_logits=model.predict(x_train01), optimizer=optimizer,
-                         n_steps=200, alpha=0.1, n_epochs=n_epochs, fraction=2/batch_size,
+                         n_steps=200, alpha=0.05, n_epochs=n_epochs, fraction=2/batch_size,
                          verbose=1, weight=1, compile=True))
 
 print(CI_classificationx(model=model, x=x_adversarial[0], X_train=x_train01,
                          Y_train=y_train01, predicted_logits=model.predict(x_train01),
-                         n_steps=200, alpha=0.1, n_epochs=n_epochs, optimizer=optimizer
+                         n_steps=200, alpha=0.05, n_epochs=n_epochs, optimizer=optimizer
                          , fraction=2/batch_size,
                          verbose=1, weight=1))
 
@@ -128,3 +133,14 @@ ax[0].set_title('Original Input')
 ax[1].imshow(x_adversarial.squeeze())
 ax[1].set_title('Adversarial Example')
 plt.show()
+
+
+#%% Dropout and ensemble
+ensemble = [train_model(c_reg, n_epochs) for _ in range(10)]
+model_dropout = train_model(c_reg, n_epochs, dropout_rate=0.2)
+
+x = x_train_4[0]
+CI_dropout(model_dropout, x=x, alpha=0.05)
+CI_ensemble(ensemble, x, alpha=0.05)
+
+
