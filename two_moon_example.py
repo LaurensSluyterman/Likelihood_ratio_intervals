@@ -1,16 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy
 import pickle
 import tensorflow as tf
 import gc
-from scipy import stats
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_moons
-from intervals_classification import CI_classificationx
+from intervals_classification import CI_classificationx, CI_dropout, CI_ensemble
 from keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
-from utils import sigmoid
 plt.rcParams['text.usetex'] = True
 plt.rcParams["font.size"] = 25
 plt.rcParams['axes.linewidth'] = 1
@@ -89,18 +86,12 @@ plt.show()
 
 #%% Using an ensemble
 ensemble = [get_model(1e-3, 500, verbose=True) for _ in range(10)]
-
-CI_ensemble = np.zeros((len(x_val), 2))
+CI_ens = np.zeros((len(x_val), 2))
 p_hats_ensemble = np.zeros((len(x_val)))
-t = scipy.stats.t(df=9).ppf(1-0.05/2)
 for i, x in enumerate(x_val):
     print(i)
-    predictions = [sigmoid(model.predict(np.array([(x-mean)/stdev]), verbose=0)) for model in ensemble]
-    var = np.var(predictions)
-    prediction = np.mean(predictions)
-    CI_ensemble[i, 0] = prediction - t * np.sqrt(var)
-    CI_ensemble[i, 1] = prediction + t * np.sqrt(var)
-    p_hats_ensemble[i] = prediction
+    p_hats_ensemble[i], CI_ens[i] = CI_ensemble(ensemble, x=(x-mean)/stdev,
+                                             alpha=0.05, give_prediction=True)
 
 #%% Saving CIs from ensemble approach
 with open('./Results/twomoon-ensemble-w1.pickle', 'wb') as handle:
@@ -108,7 +99,7 @@ with open('./Results/twomoon-ensemble-w1.pickle', 'wb') as handle:
 
 #%% Visualizing the ensemble approach
 plt.figure(dpi=200)
-z = CI_ensemble[:, 1] - CI_ensemble[:, 0]
+z = CI_ens[:, 1] - CI_ens[:, 0]
 z = np.reshape(z, (30, 30))
 c = plt.pcolormesh(x_1, x_2, np.transpose(z), vmin=0, vmax=1)
 plt.colorbar(c)
@@ -121,22 +112,16 @@ plt.show()
 
 
 #%% Dropout example
-model = get_model(c_reg=1e-3, n_epochs=500, dropout_rate=0.2)
-
-B = 1000  # Amount of forward passes
-CI_dropout = np.zeros((len(x_val), 2))
+dropout_model = get_model(c_reg=1e-3, n_epochs=1000, dropout_rate=0.2)
+CI_d = np.zeros((len(x_val), 2))
 p_hats_dropout = np.zeros((len(x_val)))
 for i, x in enumerate(x_val):
     print(i)
-    predictions = [sigmoid(model(np.array([(x-mean)/stdev]), training=1)) for _ in range(B)]
-    var = np.var(predictions)
-    prediction = np.mean(predictions)
-    CI_dropout[i, 0] = np.percentile(predictions, 2.5)
-    CI_dropout[i, 1] = np.percentile(predictions, 97.5)
-    p_hats_dropout[i] = prediction
+    p_hats_dropout[i], CI_d[i] = CI_dropout(dropout_model, (x-mean)/stdev,
+                                            B=1000, alpha=0.05)
 
 #%% Visualize the dropout approach
-z = CI_dropout[:, 1] - CI_dropout[:, 0]
+z = CI_d[:, 1] - CI_d[:, 0]
 z = np.reshape(z, (30, 30))
 plt.figure(dpi=200)
 c = plt.pcolormesh(x_1, x_2, np.transpose(z), vmin=0, vmax=1)
