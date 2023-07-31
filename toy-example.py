@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import scipy
-from intervals_2 import CI_NN
+from intervals_regression import CI_NN
 from mve_network import MVENetwork
 matplotlib.use("TkAgg")
 matplotlib.rcParams['text.usetex'] = True
@@ -60,9 +60,9 @@ plt.show()
 
 #%% Creating confidence intervals using an ensemble
 ensemble = [MVENetwork(X=X, Y=Y, n_hidden_mean=np.array([40, 30, 20]),
-                   n_hidden_var=np.array([5, 2]),
-                   n_epochs=400, verbose=1, normalization=True,
-                   reg_mean=1e-4, reg_var=1e-4) for _ in range(10)]
+                       n_hidden_var=np.array([5, 2]),
+                       n_epochs=400, verbose=True, normalization=True,
+                       reg_mean=1e-4, reg_var=1e-4) for _ in range(10)]
 
 alpha = 0.05
 CI_ensemble = np.zeros((len(x_test), 2))
@@ -81,7 +81,7 @@ for i, x in enumerate(x_test):
 plt.figure(dpi=200)
 plt.plot(X, Y, 'o', alpha=0.2)
 plt.plot(x_test, 2*x_test**2, linestyle='--', label=r'$f(x)$')
-plt.plot(x_test, p_hats_ensemble, label=r'$\hat{f}(x)$')
+plt.plot(x_test, predictions_ensemble, label=r'$\hat{f}(x)$')
 plt.fill_between(x_test[:, 0], CI_ensemble[:, 0], CI_ensemble[:, 1],
                  color='blue', alpha=0.2, linewidth=0.1, label=r'CI')
 plt.xlabel(r'$x$')
