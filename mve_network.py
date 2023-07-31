@@ -99,7 +99,7 @@ class MVENetwork:
             _ = gc.collect()
             return predictions
 
-    def train_on(self, *, x_new, X_train, Y_train, positive=True, step=2,
+    def train_on(self, *, x_new, X_train, Y_train, positive=True, delta=1,
                  batch_size=None, n_epochs=40, verbose=False, fraction=1/16,
                  weight=1):
         if self._normalization is True:
@@ -118,9 +118,9 @@ class MVENetwork:
         model.compile(loss=negative_log_likelihood, optimizer=optimizer)
         N = len(Y_train)
         if positive:
-            y_new = model.predict(x_new, verbose=0)[:, 0] + step
+            y_new = model.predict(x_new, verbose=0)[:, 0] + delta
         else:
-            y_new = model.predict(x_new, verbose=0)[:, 0] - step
+            y_new = model.predict(x_new, verbose=0)[:, 0] - delta
         x_new = np.reshape(x_new, np.shape(X_train[0]))
         y_new = np.reshape(y_new, np.shape(Y_train[0]))
         N_extra = int(N * fraction)
