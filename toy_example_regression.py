@@ -44,7 +44,7 @@ plt.show()
 #%% Creating confidence intervals
 x_test = np.reshape(np.linspace(-1.3, 1.3, 30), (30, 1))
 CI = CI_NN(MVE_network=model, X=x_test, X_train=X, Y_train=Y, alpha=0.05,
-           n_steps=100, n_epochs=400, step=1, fraction=1/16)
+           n_steps=100, n_epochs=400, delta=1, fraction=1/16)
 
 #%% Visualizing the confidence intervals
 plt.figure(dpi=200)
