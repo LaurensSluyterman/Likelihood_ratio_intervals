@@ -26,7 +26,7 @@ model = MVENetwork(X=X, Y=Y, n_hidden_mean=np.array([40, 30, 20]),
 #%% Visualizing the perturbation
 x_star = 0.0
 delta = 1
-model.train_on(x_new=x_star, X_train=X, Y_train=Y, positive=True, step=delta, n_epochs=300,
+model.train_on(x_new=x_star, X_train=X, Y_train=Y, positive=True, delta=delta, n_epochs=300,
                verbose=1, fraction=1/16)
 x_test = np.linspace(-1.2, 1.2, 100)
 plt.plot(X, Y, 'o')
