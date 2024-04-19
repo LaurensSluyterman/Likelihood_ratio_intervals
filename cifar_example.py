@@ -105,7 +105,7 @@ trained_model = tf.keras.models.load_model('./models/CNNcifar-1e-5-sgd-n15')
 print(CI_classificationx(model=trained_model, x=x_train01[-2], X_train=x_train01,
                          Y_train=y_train01, predicted_logits=trained_model.predict(x_train01),
                          n_steps=200, alpha=0.05, n_epochs=n_epochs, fraction=2/batch_size,
-                         verbose=1, optimizer=optimizer,
+                         verbose=1, optimizer=optimizer, compile=True,
                          weight=1))
 
 print(CI_classificationx(model=trained_model, x=x_test01[-2], X_train=x_train01,
