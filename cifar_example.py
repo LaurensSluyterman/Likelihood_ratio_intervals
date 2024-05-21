@@ -7,7 +7,6 @@ from keras.datasets import cifar10
 from adverserial_example_generation import generate_adversarial_example
 from intervals_classification import CI_classificationx, CI_ensemble, CI_dropout
 
-
 #%% Data import and preprocessing
 data = cifar10.load_data()
 
@@ -143,7 +142,7 @@ print(CI_classificationx(model=trained_model, x=x_adversarial[0], X_train=x_trai
                          Y_train=y_train01, predicted_logits=trained_model.predict(x_train01),
                          n_steps=200, alpha=0.05, n_epochs=n_epochs,
                          optimizer=optimizer, fraction=2/batch_size,
-                         verbose=1, weight=1))
+                         verbose=1, weight=1, compile=True))
 
 
 # Display original and adversarial input. This code snippet was made by chatGPT.
