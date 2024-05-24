@@ -6,7 +6,7 @@ from copy import deepcopy
 def ll(Y, predictions):
     """Calculate the loglikelihood up to a constant.
 
-    The variance of the residuals is taken as estimate for the variance.
+    The mse of the residuals is taken as estimate for the variance.
 
     Arguments:
         Y: The targets.
@@ -15,7 +15,7 @@ def ll(Y, predictions):
     Returns:
         loglik: The loglikelihood up to a constant.
     """
-    sigma = np.std(Y - predictions)
+    sigma = np.sqrt(np.mean(np.square(Y - predictions)))
     loglik = np.sum(-np.log(sigma) - 0.5 * (Y - predictions)**2 / sigma**2)
     return loglik
 
